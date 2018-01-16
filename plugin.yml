@@ -1,0 +1,6 @@
+name: MagicBar
+main: me.magicbar.main.MagicBar
+version: 1.0
+author: Moreal
+commands:
+  mb:
