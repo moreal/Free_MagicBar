@@ -11,10 +11,13 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.inventory.ClickType;
 import org.bukkit.event.inventory.InventoryClickEvent;
+import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerMoveEvent;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.plugin.java.JavaPlugin;
+
+import me.magicbar.main.LandManager.Land;
 
 /*
  * MagicBar Project
@@ -259,5 +262,15 @@ public class MagicBar extends JavaPlugin implements Listener {
 		Player p = e.getPlayer();
 		if(!LandManager.isAllow(p))
 			e.setCancelled(true);
+	}
+	
+	@EventHandler
+	public void onJoin(PlayerJoinEvent e) {
+		Player p = e.getPlayer();
+		
+		if (LandManager.lands.containsKey(p.getName())) {
+			MoneyManager.setMoney(p.getName(), 0);
+			LandManager.lands.put(p.getName(), new ArrayList<Land>());
+		}
 	}
 }
