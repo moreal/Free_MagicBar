@@ -36,7 +36,10 @@ public class ShopManager {
 		File directory = new File(dir);
 
 		if (!directory.exists())
+		{
+			directory.mkdirs();
 			return false;
+		}
 		else if (directory.isFile())
 			return false;
 

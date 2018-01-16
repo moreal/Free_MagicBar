@@ -46,7 +46,7 @@ import org.bukkit.plugin.java.JavaPlugin;
 
 public class MagicBar extends JavaPlugin implements Listener {
 
-	final String money_path = "./Money/";
+	final String money_path = "./MagicBar/Money.dat";
 
 	public void onEnable() {
 		Bukkit.getLogger().info("[MagicBar] Plugin is on!!");
@@ -57,6 +57,8 @@ public class MagicBar extends JavaPlugin implements Listener {
 			MoneyManager.loadMoney(money_path);
 		else
 			MoneyManager.createMoneyFile(money_path);
+		
+		ShopManager.loadShops("./MagicBar/Shops/");
 	}
 
 	public void onDisable() {
