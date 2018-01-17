@@ -10,11 +10,13 @@ import java.util.Collections;
 import java.util.HashMap;
 
 import org.bukkit.Bukkit;
+import org.bukkit.ChatColor;
 import org.bukkit.Material;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.ItemMeta;
 
 public class ShopManager {
 
@@ -37,27 +39,43 @@ public class ShopManager {
 
 		if (!directory.exists())
 		{
+			Bukkit.getLogger().info("[MagicBar] There was no Directory : " + dir);
 			directory.mkdirs();
 			return false;
 		}
+		
 		else if (directory.isFile())
 			return false;
 
 		for (String file : directory.list()) {
+			Bukkit.getLogger().info("[MagicBar] Check File : " + file);
+			
 			if (!file.endsWith(".shop"))
+			{
+				Bukkit.getLogger().info("[MagicBar] Wrong Format name : " + file);
 				continue;
+			}
 
 			try {
 				ArrayList<ItemStack> items = new ArrayList<ItemStack>();
 
-				BufferedReader br = new BufferedReader(new FileReader(new File(file)));
+				BufferedReader br = new BufferedReader(new FileReader(new File(dir + file)));
 
 				String title = br.readLine();
+				
+				Bukkit.getLogger().info("[MagicBar] the title is " + title);
+				
 				String line = null;
 
 				while ((line = br.readLine()) != null) {
+					
+					Bukkit.getLogger().info("[MagicBar] Check Line of [" + file + "] : " + line);
+					
 					if (line.equals("pass"))
-						items.add(new ItemStack(Material.AIR));
+					{
+						items.add(new ItemStack(Material.AIR, 1));
+						continue;
+					}
 
 					ItemStack item = null;
 
@@ -65,6 +83,7 @@ public class ShopManager {
 
 					if (datas.length != 4) {
 						Bukkit.getLogger().info("[MagicBar] Wrong Format File : " + file);
+						continue;
 					}
 					
 					try {
@@ -79,24 +98,36 @@ public class ShopManager {
 						int buyprice = Integer.parseInt(datas[2]);
 						int sellprice = Integer.parseInt(datas[3]);
 						
+						Bukkit.getLogger().info(String.format("[MagicBar] Amount : %d / BuyPrice : %d / SellPrice : %d", amount, buyprice, sellprice));
+						
 						ArrayList<String> lores = new ArrayList<String>();
 						
-						lores.add("구매가 [좌클릭] : " + buyprice);
-						lores.add("판매가 [우클릭] : " + sellprice);
+						lores.add(ChatColor.WHITE + "구매가 [좌클릭] : " + ChatColor.GREEN + buyprice);
+						lores.add(ChatColor.WHITE + "판매가 [우클릭] : " + ChatColor.GREEN + sellprice);
 						
 						item.setAmount(amount);
-						item.getItemMeta().setLore(lores);
+						ItemMeta meta = item.getItemMeta();
+						meta.setLore(lores);
 						
+						Bukkit.getLogger().info(String.format("[MagicBar] Set Lore : ", lores));
+						
+						item.setItemMeta(meta);
+						
+						items.add(item);
 					} catch (NumberFormatException e) {
+						Bukkit.getLogger().info("[MagicBar] Wrong Number Format : " + line);
 						break;
 					}
 				}
-
+				
+				Bukkit.getLogger().info("[MagicBar] a number of values is : " + items.size());
+				
 				if (items.size() == 27)
 					shops.add(new Shop(title, items));
 				
 				br.close();
 			} catch (FileNotFoundException e) {
+				Bukkit.getLogger().info("[MagicBar] There was no file : " + file);
 				return false;
 			} catch (IOException e) {
 				return false;

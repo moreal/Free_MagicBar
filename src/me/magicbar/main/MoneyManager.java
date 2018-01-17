@@ -34,7 +34,7 @@ public class MoneyManager {
 			fw = new FileWriter(data);
 
 			for (Map.Entry<String, Long> entry : moneys.entrySet())
-				fw.write(entry.getKey() + ": " + entry.getValue() + "\n");
+				fw.write(entry.getKey() + ":" + entry.getValue() + "\n");
 			
 			fw.flush();
 			
