@@ -10,6 +10,7 @@ import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
+import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.inventory.ClickType;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
@@ -69,7 +70,7 @@ public class MagicBar extends JavaPlugin implements Listener {
 
 		if (MoneyManager.length() > 0)
 			MoneyManager.saveMoney(money_path);
-		
+
 		LandManager.saveLands("./plugins/MagicBar/Lands/");
 	}
 
@@ -149,6 +150,17 @@ public class MagicBar extends JavaPlugin implements Listener {
 								show_help(sender);
 								return true;
 							}
+						} else if (args[1].equals("ban")) {
+							try {
+								int code = Integer.parseInt(args[2]);
+								if (0 <= code && code < LandManager.lands.get(sender.getName()).size()) {
+									LandManager.lands.get(sender.getName()).get(code).ban(args[3]);
+								} else
+									show_help(sender);
+							} catch (NumberFormatException e) {
+								show_help(sender);
+								return true;
+							}
 						} else {
 							show_help(sender);
 						}
@@ -160,8 +172,7 @@ public class MagicBar extends JavaPlugin implements Listener {
 						try {
 							int scale = Integer.parseInt(args[2]);
 							Land land = new Land(sender.getName(), ((Player) sender).getLocation(), scale);
-							LandManager.lands.get(sender.getName())
-									.add(land);
+							LandManager.lands.get(sender.getName()).add(land);
 						} catch (NumberFormatException e) {
 							show_help(sender);
 							return true;
@@ -205,9 +216,12 @@ public class MagicBar extends JavaPlugin implements Listener {
 	}
 
 	public static String player_help() {
-		return ChatColor.WHITE + "======= MagicBar Commands ========\n" + ChatColor.RESET + "/mb money : 돈을 보여줍니다.\n" + "/mb money send <Money> <Player>: 돈을 보냅니다.\n"
-				+ "/mb land : 소유하고 있는 땅을 보여줍니다\n" + "/mb land give <Number> <Player> : 땅을 줍니다\n"
-				+ "/mb land allow <Number> <Player> : 플레이어가 해당 땅에 들어올 수 있도록 합니다\n" + "/mb shop : 상점을 볼 수 있습니다";
+		return ChatColor.WHITE + "======= MagicBar Commands ========\n" + ChatColor.RESET + "/mb money : 돈을 보여줍니다.\n"
+				+ "/mb money send <Money> <Player>: 돈을 보냅니다.\n" + "/mb land : 소유하고 있는 땅을 보여줍니다\n"
+				+ "/mb land give <Number> <Player> : 땅을 줍니다\n"
+				+ "/mb land allow <Number> <Player> : 플레이어가 해당 땅에 들어올 수 있도록 합니다\n" 
+				+ "/mb land ban <Number> <Player> : 플레이어가 해당 땅에 들어올 수 없도록 합니다\n"
+				+ "/mb shop : 상점을 볼 수 있습니다";
 	}
 
 	public static String bukkit_help() {
@@ -225,7 +239,7 @@ public class MagicBar extends JavaPlugin implements Listener {
 	@EventHandler
 	public void onInventoryClick(InventoryClickEvent e) {
 		Inventory inv = e.getInventory();
-		
+
 		if (!(e.getWhoClicked() instanceof Player))
 			return;
 
@@ -236,45 +250,107 @@ public class MagicBar extends JavaPlugin implements Listener {
 			e.setCancelled(true);
 
 			ItemStack item = e.getCurrentItem();
-			
+
 			if (item == null || item.getType() == Material.AIR || !item.hasItemMeta())
 				return;
 
 			int item_code = item.getTypeId();
 
 			ArrayList<String> lores = new ArrayList<String>(item.getItemMeta().getLore());
+			
+			long buyprice = -1;
+			long sellprice = -1;
+			
+			for (String s : lores) {
+				// get Price
+				if (s.contains("구"))
+					buyprice = Long.parseLong(ChatColor.stripColor(s.split(" : ")[1]));
+				if (s.contains("판"))
+					sellprice = Long.parseLong(ChatColor.stripColor(s.split(" : ")[1]));
+			}
 
-			if (lores.size() != 2)
-				return;
-
-			// get Price
-			long buyprice = Long.parseLong(ChatColor.stripColor(lores.get(0).split(" : ")[1]));
-			long sellprice = Long.parseLong(ChatColor.stripColor(lores.get(1).split(" : ")[1]));
+			byte meta = item.getData().getData();
 
 			// get Right or Left
 			ClickType click = e.getClick();
 
 			long money = MoneyManager.getMoney(p.getName());
 
-			if (click == ClickType.RIGHT) {
+			ItemStack check_item = new ItemStack(item_code, 1, meta);
 
+			if (click == ClickType.RIGHT) {
+				if (sellprice == -1) {
+					p.sendMessage("[MagicBar] 판매 불가능한 상품입니다");
+					return;
+				}
 				if (player_inv.contains(item_code)) {
 					for (ItemStack player_item : player_inv.getContents())
-						if (player_item != null && !player_item.hasItemMeta() && player_item.getTypeId() == item_code) {
+						if (player_item != null && !player_item.hasItemMeta() && player_item.getTypeId() == item_code && player_item.getData().getData() == meta) {
+							if(player_item.getAmount() == 1)
+								player_inv.removeItem(new ItemStack[] {player_item});
+							else
+								player_item.setAmount(player_item.getAmount() - 1);
 							MoneyManager.setMoney(p.getName(), money + sellprice);
 							p.sendMessage(String.format("[MagicBar] 아이템을 판매하였습니다. 현재 소유 돈 : %d", MoneyManager.getMoney(p.getName())));
-							player_item.setAmount(player_item.getAmount() - 1);
 							break;
 						}
 				}
-
 			} else if (click == ClickType.LEFT) {
+				if (buyprice == -1) {
+					p.sendMessage("[MagicBar] 구매 불가능한 상품입니다");
+					return;
+				}
 				if (money < buyprice)
 					p.sendMessage("[MagicBar] 돈이 부족합니당...");
 				else {
-					p.sendMessage(String.format("[MagicBar] 아이템을 구매하였습니다. 현재 소유 돈 : %d", MoneyManager.getMoney(p.getName())));
 					MoneyManager.setMoney(p.getName(), money - buyprice);
-					p.getInventory().addItem(item);
+					p.getInventory().addItem(check_item);
+					p.sendMessage(String.format("[MagicBar] 아이템을 구매하였습니다. 현재 소유 돈 : %d", MoneyManager.getMoney(p.getName())));
+				}
+			} else if (click == ClickType.SHIFT_RIGHT) {
+				if (sellprice == -1) {
+					p.sendMessage("[MagicBar] 판매 불가능한 상품입니다");
+					return;
+				}
+				if (player_inv.contains(item_code)) {
+					ItemStack[] items = player_inv.getContents();
+					ItemStack player_item = null;
+					
+					for (int i = 0; i < 36; ++i) {
+						if (items[i] == null)
+							continue;
+						
+						player_item = items[i];
+						
+						if (!player_item.hasItemMeta() && player_item.getTypeId() == item_code && player_item.getData().getData() == meta) {
+							MoneyManager.setMoney(p.getName(), money + sellprice * player_item.getAmount());
+							player_inv.removeItem(new ItemStack[] {player_item});
+						
+							money = MoneyManager.getMoney(p.getName());
+						}
+					}
+					
+					p.sendMessage(String.format("[MagicBar] 아이템을 판매하였습니다. 현재 소유 돈 : %d", MoneyManager.getMoney(p.getName())));
+				}
+			} else if (click == ClickType.SHIFT_LEFT) {
+				if (buyprice == -1) {
+					p.sendMessage("[MagicBar] 구매 불가능한 상품입니다");
+					return;
+				}
+				if (money < buyprice * 64)
+					p.sendMessage("[MagicBar] 돈이 부족합니당...");
+				else if (true) {
+					
+					for(ItemStack item_t : player_inv.getContents())
+						if(item_t == null) {
+							MoneyManager.setMoney(p.getName(), money - buyprice * 64);
+							check_item.setAmount(64);
+							p.getInventory().addItem(check_item);
+							p.sendMessage(String.format("[MagicBar] 아이템을 구매하였습니다. 현재 소유 돈 : %d", MoneyManager.getMoney(p.getName())));
+							return;
+						}
+						
+						p.sendMessage("[MagicBar] 인벤토리에 빈공간이 없습니다");
 				}
 			}
 		}
@@ -283,8 +359,14 @@ public class MagicBar extends JavaPlugin implements Listener {
 	@EventHandler
 	public void onMoving(PlayerMoveEvent e) {
 		Player p = e.getPlayer();
+
 		if (!LandManager.isAllow(p))
-			e.setCancelled(true);
+			p.getLocation().add(-1, 0, -1);
+	}
+	
+	@EventHandler
+	public void onBreakBlock(BlockBreakEvent e) {
+		if (!LandManager.isAllow(e.getPlayer().getName(), e.getBlock().getLocation())) e.setCancelled(true);
 	}
 
 	@EventHandler

@@ -17,6 +17,7 @@ import org.bukkit.entity.Player;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
+import org.bukkit.material.MaterialData;
 
 public class ShopManager {
 
@@ -86,38 +87,47 @@ public class ShopManager {
 						continue;
 					}
 					
+					int item_code = 0, meta_data = 0;
+					
 					try {
-						int item_code = Integer.parseInt(datas[0]);
-						item = new ItemStack(item_code);
+						meta_data = Byte.parseByte(datas[1]);
 					} catch (NumberFormatException e) {
-						item = new ItemStack(Material.getMaterial(datas[0]));
+						Bukkit.getLogger().info("[MagicBar] Wrong Format Line : " + line);
+					}
+					
+					try {
+						item_code = Integer.parseInt(datas[0]);
+						item = new ItemStack(Material.getMaterial(item_code), 1, (byte) meta_data);
+					} catch (NumberFormatException e) {
+						item = new ItemStack(Material.getMaterial(datas[0]), 1, (byte) meta_data);
 					}
 
+					int buyprice, sellprice;
+					ArrayList<String> lores = new ArrayList<String>();
+					
+
 					try {
-						int amount = Integer.parseInt(datas[1]);
-						int buyprice = Integer.parseInt(datas[2]);
-						int sellprice = Integer.parseInt(datas[3]);
-						
-						Bukkit.getLogger().info(String.format("[MagicBar] Amount : %d / BuyPrice : %d / SellPrice : %d", amount, buyprice, sellprice));
-						
-						ArrayList<String> lores = new ArrayList<String>();
-						
+						buyprice = Integer.parseInt(datas[2]);
 						lores.add(ChatColor.WHITE + "구매가 [좌클릭] : " + ChatColor.GREEN + buyprice);
+					} catch (NumberFormatException e) {}
+					
+					try {
+						sellprice = Integer.parseInt(datas[3]);
 						lores.add(ChatColor.WHITE + "판매가 [우클릭] : " + ChatColor.GREEN + sellprice);
-						
-						item.setAmount(amount);
-						ItemMeta meta = item.getItemMeta();
-						meta.setLore(lores);
-						
-						Bukkit.getLogger().info(String.format("[MagicBar] Set Lore : ", lores));
-						
-						item.setItemMeta(meta);
-						
-						items.add(item);
-					} catch (NumberFormatException e) {
-						Bukkit.getLogger().info("[MagicBar] Wrong Number Format : " + line);
-						break;
+					} catch (NumberFormatException e) {}
+					
+					if (lores.size() == 0) {
+						items.add(new ItemStack(Material.AIR));
+						continue;
 					}
+					ItemMeta meta = item.getItemMeta();
+					meta.setLore(lores);
+					item.setData(new MaterialData(item_code, (byte) meta_data));
+					
+					Bukkit.getLogger().info(String.format("[MagicBar] Set Lore : ", lores));
+					
+					item.setItemMeta(meta);
+					items.add(item);
 				}
 				
 				Bukkit.getLogger().info("[MagicBar] a number of values is : " + items.size());

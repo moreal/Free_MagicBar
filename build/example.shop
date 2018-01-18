@@ -1,0 +1,5 @@
+Title
+pass // 빈공간
+item_code meta_data buyprice sellprice
+
+buyprice와 sellprice는 pass나 숫자가 아닌 문자열로 대체하여 구매를 막을 수 있습니다.

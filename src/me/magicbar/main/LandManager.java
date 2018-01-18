@@ -47,6 +47,22 @@ public class LandManager { // 위 아래로 : 9칸
 
 		return true;
 	}
+	
+	public static boolean isAllow(String name, Location loc) {
+		for (Map.Entry<String, ArrayList<Land>> entry : lands.entrySet()) {
+			if (entry.getKey().equals(name))
+				continue;
+			else
+				for (Land land : entry.getValue())
+					if (land.isAllow(name))
+						continue;
+					else if (land.area.contains(loc))
+						return false;
+		}
+
+		return true;
+	}
+
 
 	public static boolean saveLands(String dir) {
 		File directory = new File(dir);
@@ -154,7 +170,7 @@ class Land {
 		Location b = p.clone();
 
 		a.add(-1 * scale, -9, -1 * scale);
-		b.add(scale + 1, 8, scale + 1);
+		b.add(scale, 8, scale);
 
 		fillArea(a, b);
 
@@ -175,8 +191,8 @@ class Land {
 
 		World world = a.getWorld();
 
-		for (int i = a.getBlockX(); i < b.getBlockX(); ++i) {
-			for (int j = a.getBlockZ(); j < b.getBlockZ(); ++j) {
+		for (int i = a.getBlockX(); i <= b.getBlockX(); ++i) {
+			for (int j = a.getBlockZ(); j <= b.getBlockZ(); ++j) {
 				world.getBlockAt(i, y, j).setType(Material.BEDROCK);
 			}
 		}
@@ -184,6 +200,10 @@ class Land {
 
 	public void allow(String name) {
 		owners.add(name);
+	}
+	
+	public void ban(String name) {
+		owners.remove(name);
 	}
 
 	public boolean isAllow(String name) {
